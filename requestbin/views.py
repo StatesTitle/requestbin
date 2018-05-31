@@ -1,3 +1,4 @@
+import requests
 import urllib
 from flask import session, redirect, url_for, escape, request, render_template, make_response
 
@@ -46,9 +47,29 @@ def bin(name):
             base_url=request.scheme+'://'+request.host)
     else:
         db.create_request(bin, request)
-        resp = make_response("ok\n")
-        resp.headers['Sponsored-By'] = "https://www.runscope.com"
-        return resp
+        return _proxy(name)
+
+
+def _proxy(name):
+    new_headers = {}
+    for key, value in request.headers:
+        if key != 'Host':
+            new_headers[key] = value
+    resp = requests.request(
+        method=request.method,
+        url=request.url.replace('st-resware-requestbin.herokuapp.com', '52.36.64.165').replace('/' + name, ''),
+        headers=new_headers,
+        data=request.get_data(),
+        cookies=request.cookies,
+        allow_redirects=False)
+
+    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+    headers = [(name, value) for (name, value) in resp.raw.headers.items()
+               if name.lower() not in excluded_headers]
+
+    response = Response(resp.content, resp.status_code, headers)
+    print(resp.content)
+    return response
 
 
 @app.endpoint('views.docs')
