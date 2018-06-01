@@ -2,7 +2,7 @@ import requests
 import urllib
 from flask import session, redirect, url_for, escape, request, render_template, make_response, Response
 
-from requestbin import app, db
+from requestbin import app, config, db
 
 def update_recent_bins(name):
     if 'recent' not in session:
@@ -51,22 +51,24 @@ def bin(name, rest=None):
         return _proxy(name, rest)
 
 
-proxy_host = 'st-resware-requestbin.herokuapp.com'
-#proxy_host = 'localhost:4000'
+proxy_dest = 'https://resware.staging.statestitle.com'
 def _proxy(name, rest):
     new_headers = {}
     excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
     for key, value in request.headers:
         if key.lower() not in excluded_headers:
             new_headers[key] = value
-    new_url = request.url.replace(proxy_host, '52.36.64.165').replace('/' + name, '')
-    print("proxying from", request.url, 'to', new_url, name)
-    print("req", request.get_data(), new_headers)
+    old_route = config.PROXY_HOST + name
+    new_url = request.url.replace(old_route, proxy_dest)
+    print("proxying from", request.url, 'to', new_url, old_route)
+    # Have to replace the route for ws-addressing to work
+    # The commented out bit at the end of the line shows replacing content is fine
+    new_data = request.get_data().replace(old_route, proxy_dest)#.replace('<b:City>Scottsdale</b:City>', '<b:City>Sottsdale</b:City>')
     resp = requests.request(
         method=request.method,
         url=new_url,
         headers=new_headers,
-        data=request.get_data(),
+        data=new_data,
         cookies=request.cookies,
         allow_redirects=False)
 

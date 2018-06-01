@@ -28,6 +28,8 @@ REDIS_PREFIX = "requestbin"
 
 BUGSNAG_KEY = ""
 
+PROXY_HOST = os.environ.get('PROXY_HOST','http://localhost:4000')
+
 if REALM == 'prod':
     DEBUG = False
     ROOT_URL = "http://requestb.in"
