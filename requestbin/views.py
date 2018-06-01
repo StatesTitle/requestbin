@@ -1,6 +1,6 @@
 import requests
 import urllib
-from flask import session, redirect, url_for, escape, request, render_template, make_response
+from flask import session, redirect, url_for, escape, request, render_template, make_response, Response
 
 from requestbin import app, db
 
@@ -33,7 +33,7 @@ def home():
 
 
 @app.endpoint('views.bin')
-def bin(name):
+def bin(name, rest=None):
     try:
         bin = db.lookup_bin(name)
     except KeyError:
@@ -47,17 +47,24 @@ def bin(name):
             base_url=request.scheme+'://'+request.host)
     else:
         db.create_request(bin, request)
-        return _proxy(name)
+        #return make_response("ok\n")
+        return _proxy(name, rest)
 
 
-def _proxy(name):
+proxy_host = 'st-resware-requestbin.herokuapp.com'
+#proxy_host = 'localhost:4000'
+def _proxy(name, rest):
     new_headers = {}
+    excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
     for key, value in request.headers:
-        if key != 'Host':
+        if key.lower() not in excluded_headers:
             new_headers[key] = value
+    new_url = request.url.replace(proxy_host, '52.36.64.165').replace('/' + name, '')
+    print("proxying from", request.url, 'to', new_url, name)
+    print("req", request.get_data(), new_headers)
     resp = requests.request(
         method=request.method,
-        url=request.url.replace('st-resware-requestbin.herokuapp.com', '52.36.64.165').replace('/' + name, ''),
+        url=new_url,
         headers=new_headers,
         data=request.get_data(),
         cookies=request.cookies,
